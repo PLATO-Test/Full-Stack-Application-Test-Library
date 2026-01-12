@@ -1,0 +1,82 @@
+# This workflow builds Docker images for the API and Client, then pushes them to GitHub Container Registry
+# It runs when code is pushed to main/develop branches or when a pull request is created
+name: Build and Push Docker Images
+
+# Define when this workflow should run
+on:
+  push:
+    branches: [main, develop]  # Run when code is pushed to main or develop
+  pull_request:
+    branches: [main]  # Run when a PR is created targeting main
+
+# Environment variables used throughout the workflow
+# These define where to store the Docker images
+env:
+  REGISTRY: ghcr.io  # GitHub Container Registry URL
+  IMAGE_NAME_API: platoalberta/fullstackapplicationcourselibrary/api  # Full path for API image
+  IMAGE_NAME_CLIENT: platoalberta/fullstackapplicationcourselibrary/client  # Full path for Client image
+
+jobs:
+  # Job to build Docker images and push them to the registry
+  build-and-push:
+    runs-on: ubuntu-latest  # Use latest Ubuntu runner
+    permissions:
+      contents: read  # Permission to read repository contents
+      packages: write  # Permission to push to GitHub Container Registry
+    
+    steps:
+      # Step 1: Download the repository code to the runner
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      # Step 2: Set up Docker Buildx (advanced Docker build features like caching)
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      # Step 3: Log into GitHub Container Registry so we can push images
+      # Uses the built-in GITHUB_TOKEN for authentication
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}  # Where to log in (ghcr.io)
+          username: ${{ github.actor }}  # GitHub username of person who triggered workflow
+          password: ${{ secrets.GITHUB_TOKEN }}  # Automatically provided authentication token
+      
+      # Step 4: Build the API Docker image and push it to the registry
+      - name: Build and push API
+        uses: docker/build-push-action@v5
+        with:
+          context: ./api  # Build from the 'api' folder
+          push: ${{ github.event_name != 'pull_request' }}  # Only push on actual commits, not PRs
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_API }}:latest
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_API }}:${{ github.sha }}
+          # Two tags: 'latest' for most recent, and commit SHA for specific version
+          cache-from: type=gha  # Use GitHub Actions cache to speed up builds
+          cache-to: type=gha,mode=max  # Save cache for future builds
+      
+      # Step 5: Build the Client Docker image and push it to the registry
+      - name: Build and push Client
+        uses: docker/build-push-action@v5
+        with:
+          context: ./client  # Build from the 'client' folder
+          push: ${{ github.event_name != 'pull_request' }}  # Only push on actual commits, not PRs
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_CLIENT }}:latest
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_CLIENT }}:${{ github.sha }}
+          # Two tags: 'latest' for most recent, and commit SHA for specific version
+          cache-from: type=gha  # Use GitHub Actions cache to speed up builds
+          cache-to: type=gha,mode=max  # Save cache for future builds
+      
+      # Step 6 (Optional): Automatically trigger tests in the Playwright repository
+      # This uses GitHub API to send a signal to the Playwright repo to start testing
+      # - name: Trigger Playwright tests
+      #   if: github.event_name == 'push' && github.ref == 'refs/heads/main'  # Only on main branch pushes
+      #   run: |
+      #     # Send API request to Playwright repo to trigger test workflow
+      #     curl -X POST \
+      #       -H "Accept: application/vnd.github+json" \
+      #       -H "Authorization: Bearer ${{ secrets.PLAYWRIGHT_REPO_TOKEN }}" \
+      #       https://api.github.com/repos/PlatoAlberta/Playwright/dispatches \
+      #       -d '{"event_type":"run-tests","client_payload":{"app_version":"${{ github.sha }}"}}'
+      #     # Note: You need to create PLAYWRIGHT_REPO_TOKEN secret in repo settings
