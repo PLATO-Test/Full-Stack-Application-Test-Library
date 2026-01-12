@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  # API service
+  api:
+    # Build context points to the api folder where the Dockerfile lives
+    build: ./api
+    # Container name (optional but helpful)
+    container_name: fullstack-api
+    # Port mapping: host:container
+    ports:
+      - "5000:5000"
+    # Environment variables for the API
+    environment:
+      - NODE_ENV=development
+    # Restart policy
+    restart: unless-stopped
+
+  # Client service  
+  client:
+    # Build context points to the client folder where the Dockerfile lives
+    build: ./client
+    container_name: fullstack-client
+    ports:
+      - "3000:3000"
+    # Client depends on API being ready
+    depends_on:
+      - api
+    environment:
+      # How does the React app know where the API is?
+      - REACT_APP_API_URL=http://localhost:5000
+    restart: unless-stopped
