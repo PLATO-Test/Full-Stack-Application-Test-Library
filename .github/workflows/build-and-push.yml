@@ -68,7 +68,7 @@ jobs:
           cache-from: type=gha  # Use GitHub Actions cache to speed up builds
           cache-to: type=gha,mode=max  # Save cache for future builds
       
-      # Step 6 (Optional): Automatically trigger tests in the Playwright repository
+      # Step 6: Automatically trigger tests in the Playwright repository
       # This uses GitHub API to send a signal to the Playwright repo to start testing
       # - name: Trigger Playwright tests
       #   if: github.event_name == 'push' && github.ref == 'refs/heads/main'  # Only on main branch pushes
