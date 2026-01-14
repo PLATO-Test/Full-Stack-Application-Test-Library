@@ -68,15 +68,13 @@ jobs:
           cache-from: type=gha  # Use GitHub Actions cache to speed up builds
           cache-to: type=gha,mode=max  # Save cache for future builds
       
-      # Step 6: Automatically trigger tests in the Playwright repository
-      # This uses GitHub API to send a signal to the Playwright repo to start testing
-      # - name: Trigger Playwright tests
-      #   if: github.event_name == 'push' && github.ref == 'refs/heads/main'  # Only on main branch pushes
-      #   run: |
-      #     # Send API request to Playwright repo to trigger test workflow
-      #     curl -X POST \
-      #       -H "Accept: application/vnd.github+json" \
-      #       -H "Authorization: Bearer ${{ secrets.PLAYWRIGHT_REPO_TOKEN }}" \
-      #       https://api.github.com/repos/PlatoAlberta/Playwright/dispatches \
-      #       -d '{"event_type":"run-tests","client_payload":{"app_version":"${{ github.sha }}"}}'
-      #     # Note: You need to create PLAYWRIGHT_REPO_TOKEN secret in repo settings
+      # Step 6: Trigger Cypress tests in the Cypress repository
+      - name: Trigger Cypress tests
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'  # Only on main branch pushes
+        run: |
+          # Send API request to Cypress repo to trigger test workflow
+          curl -X POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${{ secrets.CYPRESS_REPO_TOKEN }}" \
+            https://api.github.com/repos/PlatoAlberta/Cypress/dispatches \
+            -d '{"event_type":"run-tests","client_payload":{"app_version":"${{ github.sha }}"}}'
